@@ -114,7 +114,7 @@ The light red bands on either side of the curve are the 95% confidence
 intervals, indicating it is likely that the true survival
 probability is somewhere within the red area. 
 The Kaplan Meier curve in Figure 1 is the most general assessment of risk
-we can make without any information about a patient. It is simply the
+we can make without any additional information about a patient. It is simply the
 probability of survival for all individuals in the NCCTG cohort
 
 
@@ -166,8 +166,8 @@ we need the log-rank test.
 
 The log-rank test is a hypothesis test that compares the survival
 probabilities between two groups. It computes a p-value indicating
-the compatibility between the data and the null hypothesis assuming
-all assumptions about the null hypothesis are correct (Greenland et al).
+the compatibility between the data and the null hypothesis contingent on
+all assumptions about the null hypothesis being correct (Greenland et al).
 To demonstrate usage of the log-rank test, we hypothesize that
 there exists survival differences between male and female patients
 with lung cancer. The null hypothesis is no survival difference exists
