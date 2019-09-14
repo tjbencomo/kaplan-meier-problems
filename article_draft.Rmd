@@ -104,7 +104,7 @@ Before we talk about problems with Kaplan Meier analysis, what
 exactly is Kaplan Meier? The Kaplan Meier estimator is a statistical
 method used to estimate the probability of survival over time.
 This estimate is important as it describes the general prognosis 
-for a disease, useful information to help physicians and patients
+of a disease, useful information to help physicians and patients
 discuss disease management. Figure 1 shows a Kaplan Meier plot
 of overall survival in lung cancer patients from the NCCTG cohort.
 The plot helps visualize the probability a patient survives
