@@ -251,7 +251,7 @@ power_simulations %>%
   guides(color=guide_legend(title="Method"))
 ```
 
-Caption: Figure 5. Power simulations comparing statistical power for linear Cox regression and
+Caption: Figure 5. Simulations comparing statistical power for linear Cox regression and
 median cutpoint Kaplan Meier analysis using the log-rank test.
 The dashed red line represents 80% power, the standard for most studies.
 Both methods display similar type I error rates when there is no true effect (HR = 1). 
