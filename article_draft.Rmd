@@ -1,0 +1,396 @@
+---
+title: "Kaplan Meier Article Draft"
+output:
+  html_document:
+    df_print: paged
+---
+
+# Outline
+
+## Kaplan Meier Overview
+- What is kaplan meier
+- What is it used for
+- What is the log-rank test
+- What is it used for
+
+## Introduction
+- Brief explanation of survival analysis and
+prognostic factor research
+- Kaplan Meier commonly used method - original purpose
+- Limitations of Kaplan Meier analysis
+- Own experience and disclaimer that survival
+analysis is complicated
+
+## Dichotomization
+### Loss of power
+- Binary vs continuous variable
+- Statistical power review
+- Dichotomization lowers power via simulation study
+- Dichotomization doesn't make sense from a risk standpoint
+- Find BBR picture of stepwise function
+
+### Cutpoint Selection
+- Multiple testing problems
+- Various cutpoints across studies
+
+### How to evaluate literature
+- Things to think about as you read papers using dichotmized kaplan meier
+
+## Covariate Adjustment
+- What is adjustment
+- Why adjust
+- Example of covariate adjustment
+- What variables we should be adjusting for
+
+## Added Value
+- Inference vs prediction?
+- Why you should care about added value
+- How to prove added value
+
+## Conclusion
+- Cox regression
+- When it's appropriate to dichotomize
+- Ask more from biomarkers
+
+
+# Article
+## Introduction
+A patient's prognosis refers to the risk of future outcomes such 
+as surgery complications, tumor recurrence, or death.
+Prognostic factor research is the study of information that can
+predict a patient's prognosis.
+Validated prognostic factors are an important part of
+translational research used
+to inform clinical decision-making,
+hypothesize about disease mechanisms, 
+and stratify patients for optimal treatment. 
+
+Survival data is often used to study prognostic factors.
+Kaplan Meier analysis is a common method to analyze
+this data due to it's assumed ease of use. Unfortunately,
+there are several ways to misuse Kaplan Meier analysis and
+these errors are common in the biomedical literature. 
+
+One of my first research projects as an undergrad
+was to investigate whether a specific gene's expression
+was associated with survival in melanoma patients. 
+I initially used Kaplan Meier analysis for this project,
+following survival analysis examples from the biomedical
+literature and tutorials I found online. At first these
+resources seemed sufficient, but as my analysis progressed
+I found several issues with Kaplan Meier that didn't seem
+to have clear answers. Taking statistics classes and 
+talking to statisticians helped me realize the the problem
+wasn't Kaplan Meier; it was people using
+Kaplan Meier inappropriately. Since this realiziation
+I've seen many instances of Kaplan Meier misuse working
+with researchers and reading published biomedical studies.
+
+The goal of this blog post is to dispel common
+misconceptions surrounding Kaplan Meier analysis in
+a manner accessible to researchers without a deep background
+in statistics. Although I'd love
+for this article to describe how to properly analyze
+survival data, that hope is near impossible. Survival
+analysis is a complex field with entire textbooks
+devoted to the topic. Instead, my hope is that
+after reading this post you'll be able to spot
+common mistakes and more critically evaluate prognostic 
+factor studies.
+
+## Kaplan Meier Review
+
+Before we talk about problems with Kaplan Meier analysis, what
+exactly is Kaplan Meier? The Kaplan Meier estimator is a statistical
+method used to estimate the probability of survival over time.
+This estimate is important as it describes the general prognosis 
+for a disease, useful information to help physicians and patients
+discuss disease management. Figure 1 shows a Kaplan Meier plot
+of overall survival in lung cancer patients from the NCCTG cohort.
+The plot helps visualize the probability a patient survives
+a certain amount of time. The median survival time, the amount
+of time at which 50% of patients are still alive, is about 300 days.
+The light red bands on either side of the curve are the 95% confidence
+intervals, indicating it is likely that the true survival
+probability is somewhere within the red area. 
+The Kaplan Meier curve in Figure 1 is the most general assessment of risk
+we can make without any information about a patient. It is simply the
+probability of survival for all individuals in the NCCTG cohort
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+require(survival)
+require(survminer)
+ggsurvplot(survfit(Surv(time, status) ~ 1, data = lung), 
+                      surv.median.line = "hv")
+```
+
+Caption: Figure 1. Overall survival of NCCTG lung cancer patients. Data from the
+`survival` package. Note the median survial time is indicated by the dotted line intercepting
+the x-axis.
+
+Although Figure 1 gives a good summary about the general prognosis for lung cancer
+patients, we know there are a host of factors that contribute to differential
+survival times. With more information we can
+give more accurate survival probabilities to individual patients.
+In oncology, doctors consider genetic mutations that may 
+prolong or decrease survival, such as the BRCA gene in breast cancer. These mutations
+may prolong survival because they indicate the cancer is less aggressive
+or we have treatments for patients with that mutation that prolong survival. Once
+we learn information about the patient, we can start to stratify
+patients with this information to describe more individualized risk assessments.
+The NCCTG dataset includes the sex of each patient, letting us estimate
+the probability of survival separately for males and females like in Figure 2.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+require(survival)
+require(survminer)
+require(dplyr)
+df <- lung %>%
+  mutate(sex = recode(sex, `1`="Male",`2`="Female"))
+ggsurvplot(survfit(Surv(time, status) ~ sex, data=df))
+```
+
+Caption: Figure 2. Overall survival for lung cancer patients stratified by sex.
+
+Figure 2 shows female NCCTG patients survived longer than their male counterparts.
+You may notice the curve from Figure 1 appears centered between the curves in
+Figure 2. This is no coincidence; without any patient information, the overall
+estimate in Figure 1 averaged the survival probabilities between males and females. 
+
+Notice that the explanation of Kaplan Meier curves didn't
+mention testing for a survival difference. That's because
+the Kaplan Meier estimator only estimates survival probabilities. It
+doesn't compare them. To make inferences about these survival probabilities
+we need the log-rank test.
+
+The log-rank test is a hypothesis test that compares the survival
+probabilities between two groups. It computes a p-value indicating
+the compatibility between the data and the null hypothesis assuming
+all assumptions about the null hypothesis are correct (Greenland et al).
+To demonstrate usage of the log-rank test, we hypothesize that
+there exists survival differences between male and female patients
+with lung cancer. The null hypothesis is no survival difference exists
+between males and females. The alternative hypothesis is that a survival
+difference does exist. The log-rank test produces a p-value of .001,
+suggesting that there is a survival difference between males and females.
+
+In summary, Kaplan Meier is used to estimate survival probabilities
+and the log-rank test tests for survival difference between groups.
+Now we can look at some common misuses of Kaplan Meier
+
+## Analyzing Continuous Variables
+The most common types of statistical variables in medicine
+are binary, categorical, or continuous variables.
+Binary variables consist of only two values such
+as treatment vs no treatment or male vs female. Categorical
+variables are like binary variables but with more than
+two choices like drug A vs drug B vs drug C or no exercise vs
+light exercise vs heavy exercise. Continuous variables are different
+having infinitely many values. Age is continuous 
+because it can take on any (positive) value and there is theoretically
+infinite precision. A patient can be 25, 25.5, or 25.55 years old depending
+on how precise the measurement is. Other continuous variables include
+gene expression, blood pressure, and tumor size. 
+
+Researchers trying to analyze continuous variables with Kaplan Meier
+and the log-rank test will immediately encounter problems: the log-rank
+test only compares survival between two groups (the test can be extended
+to categorical variables testing to see if any of the groups are different).
+How do we analyze a variable without any groups? To use the log-rank
+test, the continuous variable must somehow be dichotimized into groups.
+The most common approach is to dichotomize the variable so that
+values are classified as low or high. The median is often used
+to separate the low and high groups (Figure 3) but other values
+are also used (Figure 4). Other studies will use quantiles or deciles
+to categorize the variable into four or ten groups.
+
+
+![Figure 3. Median cutpoint method](https://www.dovepress.com/cr_data/article_fulltext/s163000/163432/img/cmar-163432_F001.jpg)
+
+![Figure 4. Optimal cutpoint method](https://media-springernature-com.stanford.idm.oclc.org/lw900/springer-static/image/art%3A10.1038%2Fs41417-018-0069-3/MediaObjects/41417_2018_69_Fig4_HTML.png)
+
+Dichotomization causes several problems including loss of statistical
+power and poor assumptions about risk distribution.
+
+Statistical power is the probability we correctly find
+the effect we're looking for. Power is determined by
+the number of samples and the variability of the data. High
+power is crucial for making scientific discoveries because
+low powered studies will often miss important effects. Researchers
+should be using methods that maximize statistical power. 
+
+Dichotomizing continuous variables decreases power by
+forcing all measurements to take on a simple yes or no
+value. This removes up to a third of the 
+information found in continuous variables 
+(Atlman and Royston: The cost of dichotomizing...).
+Less information means lower statistical power, requiring
+more samples or patients to make a discovery. Using
+methods with low statistical power is both cost prohibitive
+and unethical because more patients than necessary will be needed 
+(Figure 5). Methods like Cox regression, which doesn't dichotomize 
+continuous variables, should be used instead.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+require(readr)
+require(ggplot2)
+power_simulations <- read_csv("cox_power_simulations_small_samples.csv")
+power_simulations %>%
+  mutate(model = case_when(
+    model == "linear" ~ "Cox",
+    model == "median" ~ "Kaplan Meier"
+  )) %>%
+  ggplot(aes(samples, power)) +
+  geom_point() +
+  geom_line(aes(color = model)) +
+  facet_wrap(~HR) +
+  geom_hline(aes(yintercept = .8), colour = "red", 
+             linetype = "dashed") +
+  labs(x = "Samples", y = "Power") +
+  guides(color=guide_legend(title="Method"))
+```
+
+Caption: Figure 5. Power simulations comparing statistical power for linear Cox regression and
+median cutpoint Kaplan Meier analysis using the log-rank test.
+The dashed red line represents 80% power, the standard for most studies.
+Both methods display similar type I error rates when there is no true effect (HR = 1). 
+See the GitHub repository for more details on the simulation study parameters. 
+
+Dichotomization also makes poor assumptions about the distribution of risk
+among patients. For example, consider age as a prognostic factor
+for myocardial infarcation (MI). Older age is usually associated with a greater
+risk of MI. Using a median age of 50, all patients less than 50 years old are
+classified as young and patients over 50 are classified as old. This dichotomization
+assumes all young patients have the same risk of MI. It also assumes all old patients 
+have the same, higher risk of MI than younger patients (Figure 6). 
+This assumpiton is clearly wrong as a 49 year old man is much
+more likely to have a heart attack than a 20 year old. There's no reason a 49 year old
+should be in the same risk group as the 20 year old; no biological switch suddenly
+turns on when we turn 50 that drastically increases our risk of heart attack from
+when we are 49. Although some biological variables do display a stepwise action
+mechanism, where nothing happens until a certain value is reached (think of the 50mV action
+potential in neurons to open ion gated channels), studies suggest most physiological
+variables don't follow such mechanism. Instead risk increases gradually. 
+Some variables even follow nonlinear trends. Continuous modeling methods
+like Cox regression allow for these trends, considering the 20 year old
+at similar risk to a 21 year old instead of a 49 year old. 
+
+INSERT FIGURE 6 STEPWISE RISK
+
+```{r}
+require(dplyr)
+require(ggplot2)
+risk_df <- data.frame(age = rnorm(200, 65, 10))
+risk_df %>%
+  mutate(age.cut = case_when(
+    age < median(age) ~ "Young",
+    age >= median(age) ~ "Old"
+  )) %>%
+  mutate(binary.risk = case_when(
+    age.cut == "Young" ~ .4,
+    age.cut == "Old" ~ .6
+  )) %>%
+  ggplot(aes(age, binary.risk)) +
+  geom_step() +
+  ylim(0, 1) +
+  labs(x = "Age", y = "Heart Attack Risk") +
+  annotate("text", x = 50, y = .45, label = "Young", size=5) +
+  annotate("text", x = 77, y = .65, label = "Old", size=5)
+```
+
+
+
+### Optimal Cutpoint Selection
+ADD Optimal Cutpoint Method Not sure yet
+
+## Covariate Adjustment
+
+## Added Value
+
+## Conclusion
+
+# Literature Review
+
+### Bennette and Vickers
+1) multiple testing of quantiles
+2) stepwise function of risk --> loss of power and poor estimates
+3) Cutpoint variability between studies
+
+### Altman et al: Commentary
+1) Information loss
+2) Cutpoint variability between studies
+3) "Optimal" cutpoint selection leads to false positives
+
+### Metze
+1) Cutpoint variability between studies
+2) Loss of power
+
+### Royston et al: Dichotomizing continuous predictors...
+1) Loss of power
+2) Residual confounding see 5)
+3) Data derived cutpoints --> estimation bias
+4) Need to adjust for other variables
+5) Dichotomizing 2 or more variables in a model create spurious relationships
+
+### Dawson and Weiss
+1) Residual confounding
+2) Loss of power
+
+### Giannoni et al
+1) Cutpoint variability between studies
+2) Apparently "optimal" cutpoints almost always appear
+when no step in risk is present
+3) Shouldn't assume prognostic thresholds exist
+
+### Altman: Letter to the editor
+1) Multiple testing
+2) Biased estimation due to "optimal" selection
+3) Loss of information and inappropriate stepwise risk function assumption
+
+### Atlman and Royston: The cost of dichotomizing...
+1) Information loss --> loss of power
+2) Underestimate variation of risk
+3) Cutpoint variability between studies
+4) Residual confounding in a multivariable setting
+
+### Steyerberg et al: Assessing the incremental value of...
+1) Decision-analytic measures more sensitive than AUC ROC
+2) Incremental value added key to evaluating a new biomarker
+
+### Moons: Criteria for Scientific Evaluation of Novel Markers...
+1) Prospective follow-up studies best for prognostic marker study
+2) Nested case control or case-cohort design best for predictive validation
+3) Incremental value added key to evaluating a new biomarker
+4) Only evaluating individual markers leads to lots of false positives
+and doesn't guarantee predictive ability in multivariable context
+5) Use NRI and risk calibration to check added value
+6) Don't use p-value alone - at least look at effect size (although this is weak)
+7) Different researchers different patients to validate model
+
+### Pencina et al: Evaluating the added preditctive ability...
+1) p-value significance not enough
+2) AUC ROC not sensitive enough
+
+### Harrell et al: Multivariable Prognostic Models...
+1) Need to evaluate discrimination and calibration
+2) c-statistic
+
+### Riley et al: PROGRESS 2
+1) Prognostic factors used to define disease, inform clinical decision-making,
+and identify new research targets
+
+### Steyerberg et al: PROGRESS 3
+1) Individual factors are rarely sufficient for accurate predictions
+
+### Hingorani et al: PROGRESS 4
+1) Prognostic factors useful for precision medicine
+2) Factors can be predictive of treatment response
+
+### Bender et al
+1) Simulating survival data with covariates
+
+### Greenland et al
+1) p-value definition
+
+
