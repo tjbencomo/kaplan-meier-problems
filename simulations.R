@@ -1,4 +1,6 @@
 # File: simulations.R
+# Author: Tomas Bencomo
+
 library(survival)
 library(dplyr)
 library(tidyr)
