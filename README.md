@@ -1,5 +1,7 @@
 # kaplan-meier-problems
-Code for *Kaplan Meier Mistakes* article on Medium. `simulations.R` is the script that generates simulation data, measures statistical power, and plots results. `cox_simulations.R` is a first draft script that used a different simulation method.
+Code for *Kaplan Meier Mistakes* article on [Medium](https://towardsdatascience.com/kaplan-meier-mistakes-48cd9e168b09).
+`simulations.R` is the script that generates simulation data, measures statistical power, and plots results.
+`cox_simulations.R` is a first draft script that used a different simulation method.
 ## Simulation Study Parameters
 Survival data is simulated to mimic glioblastoma survival rates.
 An exponential distribution is used to model survival times with a
